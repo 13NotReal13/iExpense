@@ -6,78 +6,63 @@
 //
 
 import SwiftUI
+import SwiftData
 
-struct ExpenseItem: Identifiable, Codable {
+@Model
+class ExpenseItem {
     var id = UUID()
-    let name: String
-    let type: String
-    let amount: Double
-    let currency: String
-}
-
-@Observable
-class Expenses {
-    var items = [ExpenseItem]() {
-        didSet {
-            if let encoded = try? JSONEncoder().encode(items) {
-                UserDefaults.standard.set(encoded, forKey: "Items")
-            }
-        }
-    }
+    var name: String
+    var type: String
+    var amount: Double
+    var currency: String
     
-    init() {
-        if let savedItems = UserDefaults.standard.data(forKey: "Items") {
-            if let decodedItems = try? JSONDecoder().decode([ExpenseItem].self, from: savedItems) {
-                items = decodedItems
-                return
-            }
-        }
-        
-        items = []
+    init(id: UUID = UUID(), name: String, type: String, amount: Double, currency: String) {
+        self.id = id
+        self.name = name
+        self.type = type
+        self.amount = amount
+        self.currency = currency
     }
 }
 
 struct ContentView: View {
-    @State private var expenses = Expenses()
+    @Environment(\.modelContext) var modelContext
+    @Query var expenses: [ExpenseItem]
     
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    ForEach(expenses.items) { item in
-                        if item.type == "Business" {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(item.name)
-                                        .font(.headline)
-                                    Text(item.type)
-                                }
-                                
-                                Spacer()
-                                
-                                Text(item.amount, format: .currency(code: "\(item.currency)"))
-                                    .foregroundStyle(styleForAmount(item.amount))
+                    ForEach(expenses.filter { $0.type == "Business" }) { item in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(item.name)
+                                    .font(.headline)
+                                Text(item.type)
                             }
+                            
+                            Spacer()
+                            
+                            Text(item.amount, format: .currency(code: "\(item.currency)"))
+                                .foregroundStyle(styleForAmount(item.amount))
                         }
                     }
                     .onDelete(perform: removeItems)
                 }
                 
                 Section {
-                    ForEach(expenses.items) { item in
-                        if item.type == "Personal" {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(item.name)
-                                        .font(.headline)
-                                    Text(item.type)
-                                }
-                                
-                                Spacer()
-                                
-                                Text(item.amount, format: .currency(code: "\(item.currency)"))
-                                    .foregroundStyle(styleForAmount(item.amount))
+                    ForEach(expenses.filter { $0.type == "Business" }) { item in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(item.name)
+                                    .font(.headline)
+                                Text(item.type)
                             }
+                            
+                            Spacer()
+                            
+                            Text(item.amount, format: .currency(code: "\(item.currency)"))
+                                .foregroundStyle(styleForAmount(item.amount))
                         }
                     }
                     .onDelete(perform: removeItems)
@@ -85,7 +70,7 @@ struct ContentView: View {
             }
             .navigationTitle("iExpense")
             .toolbar {
-                NavigationLink(destination: AddView(expenses: expenses)) {
+                NavigationLink(destination: AddView()) {
                     Label("Add Expense", systemImage: "plus")
                 }
             }
@@ -93,7 +78,10 @@ struct ContentView: View {
     }
     
     private func removeItems(at offsets: IndexSet) {
-        expenses.items.remove(atOffsets: offsets)
+        for offset in offsets {
+            let item = expenses[offset]
+            modelContext.delete(item)
+        }
     }
     
     private func styleForAmount(_ amount: Double) -> Color {
@@ -109,4 +97,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .modelContainer(for: ExpenseItem.self)
 }

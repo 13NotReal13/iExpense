@@ -6,16 +6,17 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct AddView: View {
+    @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
+    @Query var expenses: [ExpenseItem]
     
     @State private var name = "Title"
     @State private var type = "Personal"
     @State private var amount = 0.0
     @State private var currency = "USD"
-    
-    var expenses: Expenses
     
     private let types = ["Business", "Personal"]
     private let currencies = ["USD", "PLN", "CAD"]
@@ -58,15 +59,11 @@ struct AddView: View {
                             amount: amount,
                             currency: currency
                         )
-                        expenses.items.append(item)
+                        modelContext.insert(item)
                         dismiss()
                     }
                 }
             }
         }
     }
-}
-
-#Preview {
-    AddView(expenses: Expenses())
 }
